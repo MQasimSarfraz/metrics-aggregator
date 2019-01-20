@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1beta1
+kind: Deployment
+
+metadata:
+  name: metrics-aggregator
+  namespace: monitoring
+
+spec:
+  replicas: 1
+
+  template:
+    metadata:
+      name: metrics-aggregator
+      labels:
+        app: metrics-aggregator
+
+    spec:
+      containers:
+        - name: metrics-aggregator
+          image: smqasims/metrics-aggregator:latest
+
+          resources:
+            requests:
+              memory: "50Mi"
+              cpu: "25m"
+
+          ports:
+            - name: http
+              containerPort: 3080
+
+          readinessProbe:
+            periodSeconds: 5
+            timeoutSeconds: 4
+            httpGet:
+              path: /ping
+              port: http
+
+          livenessProbe:
+            timeoutSeconds: 4
+            initialDelaySeconds: 10
+            httpGet:
+              path: /ping
+              port: http
