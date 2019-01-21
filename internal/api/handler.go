@@ -7,6 +7,8 @@ import (
 	"net/http"
 )
 
+const defaultTimeslice = 60
+
 type API struct {
 	aggregator *aggregator.Aggregator
 }
@@ -16,14 +18,15 @@ func NewAPI(aggregator *aggregator.Aggregator) API {
 }
 
 type AggregatorOpts struct {
-	NodeName    string `path:"nodeName"`
-	ProcessName string `path:"processName"`
+	NodeName    string  `path:"nodeName"`
+	ProcessName string  `path:"processName"`
+	Timeslice   float64 `query:"timeslice"`
 }
 
 type AggregatorView struct {
-	Timeslice  float32 `json:"timeslice" validate:"required,gte=0"`
-	UsedCPU    float32 `json:"cpu" validate:"required,gte=0"`
-	UsedMemory float32 `json:"mem" validate:"required,gte=0"`
+	Timeslice  float64 `json:"timeslice" validate:"required,gte=0"`
+	UsedCPU    float64 `json:"cpu" validate:"required,gte=0"`
+	UsedMemory float64 `json:"mem" validate:"required,gte=0"`
 }
 
 func routing(api API) http.Handler {
@@ -35,6 +38,7 @@ func routing(api API) http.Handler {
 func register(r *httprouter.Router, api API) {
 	r.GET("/ping", api.ping)
 	r.POST("/v1/metrics/node/:nodeName", api.createNodeMetric)
+	r.GET("/v1/analytics/nodes/average", api.getNodesAverage)
 	r.POST("/v1/metrics/node/:nodeName/process/:processName", api.createProcessMetric)
 }
 
@@ -56,11 +60,12 @@ func (api API) createNodeMetric(w http.ResponseWriter, req *http.Request, params
 			UsedMem:   body.UsedMemory,
 			Timeslice: body.Timeslice,
 		}
-		err := api.aggregator.StoreNodeMetric(nodeMetrics)
 
+		err := api.aggregator.StoreNodeMetric(nodeMetrics)
 		if err != nil {
 			return nil, err
 		}
+
 		return httputil.WriteJSON(w, http.StatusCreated, body), nil
 	})
 
@@ -80,8 +85,8 @@ func (api API) createProcessMetric(w http.ResponseWriter, req *http.Request, par
 			Timeslice: body.Timeslice,
 			NodeName:  opts.NodeName,
 		}
-		err := api.aggregator.StoreProcessMetric(processMetrics)
 
+		err := api.aggregator.StoreProcessMetric(processMetrics)
 		if err != nil {
 			return nil, err
 		}
@@ -89,4 +94,23 @@ func (api API) createProcessMetric(w http.ResponseWriter, req *http.Request, par
 		return httputil.WriteJSON(w, http.StatusCreated, body), nil
 	})
 
+}
+
+// getNodesAverage returns the average metrics for all the nodes
+func (api API) getNodesAverage(w http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	var opts AggregatorOpts
+
+	httputil.ExtractAndCall(&opts, w, req, params, func() (interface{}, error) {
+
+		if opts.Timeslice == 0 {
+			opts.Timeslice = defaultTimeslice
+		}
+
+		average, err := api.aggregator.GetNodesAverage(opts.Timeslice)
+		if err != nil {
+			return nil, err
+		}
+
+		return average, nil
+	})
 }
