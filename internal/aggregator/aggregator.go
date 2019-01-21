@@ -24,14 +24,24 @@ func NewAggregator(dbClient client.Client) *Aggregator {
 
 // NodeMetric is a type for metrics collected for a node.
 type NodeMetric struct {
+	Name      string
 	UsedCPU   float32
 	UsedMem   float32
 	Timeslice float32
 }
 
+// ProcessMetric is a type for metrics collected for a process.
+type ProcessMetric struct {
+	Name      string
+	UsedCPU   float32
+	UsedMem   float32
+	Timeslice float32
+	NodeName  string
+}
+
 // StoreNodeMetric stores the NodeMetric in the influxDB.
 // It returns error in case there was an issue writing to database.
-func (a *Aggregator) StoreNodeMetric(nodeName string, metric NodeMetric) error {
+func (a *Aggregator) StoreNodeMetric(metric NodeMetric) error {
 
 	batchPoints, _ := client.NewBatchPoints(client.BatchPointsConfig{Database: DbName})
 	dbAggregator := map[string]interface{}{
@@ -39,12 +49,33 @@ func (a *Aggregator) StoreNodeMetric(nodeName string, metric NodeMetric) error {
 		"mem_used":  metric.UsedMem,
 		"timeslice": metric.Timeslice,
 	}
-	point, _ := client.NewPoint("node", map[string]string{"name": nodeName}, dbAggregator, time.Now())
+	point, _ := client.NewPoint("node", map[string]string{"name": metric.Name}, dbAggregator, time.Now())
 	batchPoints.AddPoint(point)
 
 	err := a.dbClient.Write(batchPoints)
 	if err != nil {
 		errors.WithMessage(err, "error storing node metric")
+	}
+
+	return nil
+}
+
+// StoreProcessMetric stores the Process in the influxDB.
+// It returns error in case there was an issue writing to database.
+func (a *Aggregator) StoreProcessMetric(metric ProcessMetric) error {
+
+	batchPoints, _ := client.NewBatchPoints(client.BatchPointsConfig{Database: DbName})
+	dbAggregator := map[string]interface{}{
+		"cpu_used":  metric.UsedCPU,
+		"mem_used":  metric.UsedMem,
+		"timeslice": metric.Timeslice,
+	}
+	point, _ := client.NewPoint("process", map[string]string{"name": metric.Name, "node": metric.NodeName}, dbAggregator, time.Now())
+	batchPoints.AddPoint(point)
+
+	err := a.dbClient.Write(batchPoints)
+	if err != nil {
+		errors.WithMessage(err, "error storing process metric")
 	}
 
 	return nil

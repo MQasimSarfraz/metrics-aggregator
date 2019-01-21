@@ -6,8 +6,8 @@ ENV GO111MODULE=on
 
 WORKDIR $GOPATH/src/$PACKAGE
 
-# create directories for binary
-RUN mkdir -p /out
+# create directories for binary and install dependencies
+RUN mkdir -p /out && apk --no-cache add git
 
 # copy sources, test and build the application
 COPY . ./
