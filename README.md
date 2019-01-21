@@ -4,6 +4,7 @@ A simple metric aggregator service
 ## Installation:
 The service can be installed in a Kubernetes environment using:
 ```
+kubectl -f deploy/influxdb/
 kubectl -f deploy/
 ```
 ## Requirements:

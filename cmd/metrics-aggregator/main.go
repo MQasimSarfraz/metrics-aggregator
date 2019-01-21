@@ -15,7 +15,7 @@ func main() {
 
 	var opts struct {
 		Address         string        `long:"http-address" default:":3080" description:"Address to listen on."`
-		InfluxDBAddress string        `long:"influxdb-address" default:"http://localhost:8086" description:"Address used to connect to db."`
+		InfluxDBAddress string        `long:"influxdb-address" default:"http://influxdb.monitoring.svc.cluster.local:8086" description:"Address used to connect to db."`
 		InfluxDBTimeout time.Duration `long:"influxdb-timeout" default:"3" description:"Duration to connect to db."`
 	}
 
